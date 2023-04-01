@@ -63,11 +63,18 @@ target_include_directories(${PROJECT_NAME} PRIVATE options_parser)
 
 #! Add external packages
 # options_parser requires boost::program_options library
-find_package(Boost 1.71.0 COMPONENTS program_options system REQUIRED)
-target_include_directories(${PROJECT_NAME} PRIVATE ${Boost_INCLUDE_DIR})
-target_link_libraries(${PROJECT_NAME} Boost::program_options Boost::system)
+#find_package(Boost 1.71.0 COMPONENTS program_options system REQUIRED)
+#target_include_directories(${PROJECT_NAME} PRIVATE ${Boost_INCLUDE_DIR})
+#target_link_libraries(${PROJECT_NAME} Boost::program_options Boost::system)
 
-						
+target_include_directories(${PROJECT_NAME} PRIVATE /usr/include/libxml++-5.0)
+target_include_directories(${PROJECT_NAME} PRIVATE /usr/lib64/libxml++-5.0/include)
+target_link_libraries(${PROJECT_NAME} xml++-5.0)
+
+find_package(CURL REQUIRED)
+target_include_directories(${PROJECT_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} ${CURL_LIBRARIES})
+
 ##########################################################
 # Fixed CMakeLists.txt part 
 ##########################################################
