@@ -55,21 +55,19 @@ include(cmake/CompilerWarnings.cmake)
 ##########################################################
 
 #! Project main executable source compilation
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/config_parser.cpp include/config_parser.h include/exceptions.h)
 
 
 #! Put path to your project headers
-target_include_directories(${PROJECT_NAME} PRIVATE options_parser)
+target_include_directories(${PROJECT_NAME} PRIVATE include)
 
 #! Add external packages
 # options_parser requires boost::program_options library
-#find_package(Boost 1.71.0 COMPONENTS program_options system REQUIRED)
-#target_include_directories(${PROJECT_NAME} PRIVATE ${Boost_INCLUDE_DIR})
-#target_link_libraries(${PROJECT_NAME} Boost::program_options Boost::system)
-
-target_include_directories(${PROJECT_NAME} PRIVATE /usr/include/libxml++-5.0)
-target_include_directories(${PROJECT_NAME} PRIVATE /usr/lib64/libxml++-5.0/include)
-target_link_libraries(${PROJECT_NAME} xml++-5.0)
+find_package(Boost 1.71.0 COMPONENTS program_options system locale REQUIRED)
+target_include_directories(${PROJECT_NAME} PRIVATE ${Boost_INCLUDE_DIR})
+target_link_libraries(${PROJECT_NAME} Boost::program_options Boost::system)
+set(Boost_USE_STATIC_LIBS OFF) # enable dynamic linking
+set(Boost_USE_MULTITHREAD ON)
 
 find_package(CURL REQUIRED)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
