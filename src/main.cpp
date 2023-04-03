@@ -9,9 +9,12 @@
 #include <set>
 #include <queue>
 #include <map>
+#include <filesystem>
+#include <bsoncxx/json.hpp>
+#include <mongocxx/cursor.hpp>
 #include "config_parser.h"
 #include "exceptions.h"
-#include <filesystem>
+#include "db_connector.h"
 
 size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
     std::string data(reinterpret_cast<const char*>(ptr), static_cast<size_t>(size * nmemb));
@@ -28,6 +31,7 @@ std::string parse_argv(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
+    auto mongodb_inst = test();
     auto config_file_name = parse_argv(argc, argv);
     auto config_file = std::ifstream{config_file_name};
     if (config_file.fail()) {
@@ -93,6 +97,7 @@ int main(int argc, char* argv[]) {
         if (titles[curr_url].empty()) {
             titles[curr_url] = "No title";
         }
+        insert_page(titles[curr_url]);
 
         std::set<std::string> urls = {
                 std::sregex_token_iterator(str.begin(), str.end(), url_re, 1),
@@ -119,6 +124,8 @@ int main(int argc, char* argv[]) {
     for (const auto& [url, title] : titles) {
         std::cout << url << " " << title << std::endl;
     }
-
+    std::cout << std::endl;
+    auto q = std::string{"нерв"};
+    auto results = full_text_search(q);
     return 0;
 }
