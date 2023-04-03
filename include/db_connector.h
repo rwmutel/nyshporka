@@ -1,0 +1,6 @@
+#ifndef NYSHPORKA_DB_CONNECTOR_H
+#define NYSHPORKA_DB_CONNECTOR_H
+
+#endif //NYSHPORKA_DB_CONNECTOR_H
+
+void test();

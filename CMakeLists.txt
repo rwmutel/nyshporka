@@ -55,7 +55,13 @@ include(cmake/CompilerWarnings.cmake)
 ##########################################################
 
 #! Project main executable source compilation
-add_executable(${PROJECT_NAME} src/main.cpp src/config_parser.cpp include/config_parser.h include/exceptions.h)
+add_executable(
+		${PROJECT_NAME}
+		src/main.cpp
+		src/config_parser.cpp include/config_parser.h
+		include/exceptions.h
+		src/db_connector.cpp include/db_connector.h
+)
 
 
 #! Put path to your project headers
@@ -73,6 +79,13 @@ find_package(CURL REQUIRED)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${CURL_LIBRARIES})
 
+find_package(libmongocxx REQUIRED)
+target_include_directories(${PROJECT_NAME} PRIVATE ${LIBMONGOCXX_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} ${LIBMONGOCXX_LIBRARIES})
+
+find_package(libbsoncxx REQUIRED)
+target_include_directories(${PROJECT_NAME} PRIVATE ${LIBBSONCXX_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} ${LIBBSONCXX_LIBRARIES})
 ##########################################################
 # Fixed CMakeLists.txt part 
 ##########################################################
