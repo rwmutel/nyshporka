@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <bsoncxx/json.hpp>
 #include <mongocxx/cursor.hpp>
+#include <mongocxx/instance.hpp>
 #include "config_parser.h"
 #include "exceptions.h"
 #include "db_connector.h"
@@ -31,7 +32,10 @@ std::string parse_argv(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
-    auto mongodb_inst = test();
+    std::string db_name{"nysh_pages"};
+    std::string col_name{"pages_0_1"};
+    auto db_connection = DBConnector(db_name, col_name);
+
     auto config_file_name = parse_argv(argc, argv);
     auto config_file = std::ifstream{config_file_name};
     if (config_file.fail()) {
@@ -97,7 +101,7 @@ int main(int argc, char* argv[]) {
         if (titles[curr_url].empty()) {
             titles[curr_url] = "No title";
         }
-        insert_page(titles[curr_url]);
+        db_connection.insert_page(titles[curr_url]);
 
         std::set<std::string> urls = {
                 std::sregex_token_iterator(str.begin(), str.end(), url_re, 1),
@@ -126,6 +130,9 @@ int main(int argc, char* argv[]) {
     }
     std::cout << std::endl;
     auto q = std::string{"нерв"};
-    auto results = full_text_search(q);
+    auto results = db_connection.full_text_search(q);
+    for (auto& x: results) {
+        std::cout << bsoncxx::to_json(x) << std::endl;
+    }
     return 0;
 }

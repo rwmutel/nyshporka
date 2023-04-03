@@ -9,41 +9,32 @@
 
 namespace bb = bsoncxx::builder::basic;
 
-mongocxx::instance test() {
-    mongocxx::instance instance{}; // This should be done only once.
-    mongocxx::uri uri("mongodb://localhost:27017");
-    mongocxx::client client(uri);
-    mongocxx::database db = client["examples"];
-    mongocxx::collection col = db["movies"];
-    auto cursor_all = col.find({});
-    std::cout << "collection " << col.name()
-              << " contains these documents:" << std::endl;
-    for (auto doc : cursor_all) {
-        std::cout << bsoncxx::to_json(doc) << std::endl;
-    }
-    std::cout << std::endl;
-    return instance;
+DBConnector::DBConnector(
+        const std::string& database_name,
+        const std::string& collection_name,
+        const std::string& uri_str
+        ) {
+    mongocxx::uri uri(uri_str);
+    client = mongocxx::client(uri);
+    database = client[database_name];
+    col = database[collection_name];
 }
 
-void insert_page(std::string& title) {
-    mongocxx::uri uri("mongodb://localhost:27017");
-    mongocxx::client client(uri);
-    mongocxx::database db = client["nysh_pages"];
-    mongocxx::collection col = db["pages_0_1"];
-    col.create_index(bb::make_document(bb::kvp("page_title", "text")));
-    col.insert_one(bb::make_document(bb::kvp("page_title", title)));
+mongocxx::result::insert_one DBConnector::insert_page(std::string& title) {
+    if (!index_present) {
+        col.create_index(bb::make_document(bb::kvp("page_title", "text")));
+        index_present = true;
+    }
+    return col.insert_one(bb::make_document(bb::kvp("page_title", title))).get();
 }
 
-mongocxx::cursor full_text_search(std::string& query) {
-    mongocxx::uri uri("mongodb://localhost:27017");
-    mongocxx::client client(uri);
-    mongocxx::database db = client["nysh_pages"];
-    mongocxx::collection col = db["pages_0_1"];
-    auto results = col.find(bb::make_document(bb::kvp(
-            "$text",
-            bb::make_document(bb::kvp("$search", query)))));
-    for (auto& x: results) {
-        std::cout << bsoncxx::to_json(x) << std::endl;
-    }
-    return results;
+mongocxx::cursor DBConnector::full_text_search(std::string& query) {
+    return col.find(
+            bb::make_document(
+                    bb::kvp(
+                            "$text",
+                            bb::make_document(bb::kvp("$search", query))
+                    )
+                )
+            );
 }
