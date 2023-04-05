@@ -36,12 +36,14 @@ mongocxx::result::insert_one DBConnector::insert_page(
 }
 
 mongocxx::cursor DBConnector::full_text_search(std::string& query) {
+    mongocxx::options::find opts{};
+    opts.projection(bb::make_document(bb::kvp("title", 1), bb::kvp("url", 1)));
     return col.find(
             bb::make_document(
                     bb::kvp(
                             "$text",
                             bb::make_document(bb::kvp("$search", query))
                     )
-                )
+                ), opts
             );
 }
