@@ -5,6 +5,7 @@
 #include <mongocxx/cursor.hpp>
 #include <mongocxx/stdx.hpp>
 #include <mongocxx/uri.hpp>
+#include <utility>
 #include "db_connector.h"
 
 namespace bb = bsoncxx::builder::basic;
@@ -20,12 +21,14 @@ DBConnector::DBConnector(
     col = database[collection_name];
 }
 
-mongocxx::result::insert_one DBConnector::insert_page(std::string& title) {
+mongocxx::result::insert_one DBConnector::insert_page(
+        bsoncxx::view_or_value<bsoncxx::document::view, bsoncxx::document::value> document
+        ) {
     if (!index_present) {
         col.create_index(bb::make_document(bb::kvp("page_title", "text")));
         index_present = true;
     }
-    return col.insert_one(bb::make_document(bb::kvp("page_title", title))).value();
+    return col.insert_one(std::move(document)).value();
 }
 
 mongocxx::cursor DBConnector::full_text_search(std::string& query) {
