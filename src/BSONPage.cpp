@@ -20,14 +20,13 @@ size_t BSONPage::write_data(void *ptr, size_t size, size_t nmemb, void *stream) 
 
 void BSONPage::get_text(std::string& text) const {
     CURL *curl;
-    std::string str;
     curl = curl_easy_init();
     if (curl) {
         curl_easy_setopt(curl, CURLOPT_URL, url_.c_str());
         curl_easy_setopt(curl, CURLOPT_USERAGENT,
                          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36");
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &BSONPage::write_data);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &str);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &text);
         auto res = curl_easy_perform(curl);
         curl_easy_cleanup(curl);
         if (res != CURLE_OK) {
@@ -51,11 +50,9 @@ void BSONPage::parse_page() {
 }
 
 void BSONPage::parse_links(const std::string& str) {
-    const std::regex url_re{R"!!(<\s*A\s+[^>]*href\s*=\s*"([^"]*)")!!", std::regex_constants::icase};
-    links_ = {
-            std::sregex_token_iterator(str.begin(), str.end(), url_re, 1),
-            std::sregex_token_iterator()
-    };
+    const std::regex url_re{R"!!(<\s*A\s+[^>]*href\s*=\s*"(http[^"]*)")!!", std::regex_constants::icase};
+    links_ = std::set<std::string>{std::sregex_token_iterator(str.cbegin(), str.cend(), url_re, 1),
+                                   std::sregex_token_iterator()};
 }
 
 void BSONPage::parse_lang(const std::string &str) {
@@ -78,11 +75,15 @@ void BSONPage::parse_title(const std::string &str) {
 }
 
 void BSONPage::parse_headings(const std::string &str) {
-    const std::regex heading_re{R"!!(<\s*h[1-6]\s*>([^<]*)<\s*/\s*h[1-6]\s*>)!!", std::regex_constants::icase};
+    const std::regex heading_re{R"!!(<h[1-6][^>]*>(.*?)<\/h[1-6]>)!!", std::regex_constants::icase};
+
     std::smatch match;
     std::string::const_iterator search_start(str.cbegin());
     while (std::regex_search(search_start, str.cend(), match, heading_re)) {
-        std::cout << match[1] << std::endl;
+        auto curr_heading = match[1].str();
+        curr_heading = std::regex_replace(curr_heading, std::regex(R"!!((<.+?(?=>)>|<\/.+?>|\/doc))!!"), "");
+        headings_.emplace_back(curr_heading);
+        std::cout<< curr_heading << std::endl;
         search_start = match.suffix().first;
     }
 }
@@ -95,7 +96,7 @@ const std::string& BSONPage::get_lang() const {
     return lang_;
 }
 
-bsoncxx::builder::basic::document&& BSONPage::get_bson() const {
+bsoncxx::document::value BSONPage::get_bson() const {
     bsoncxx::builder::basic::document doc{};
     doc.append(bsoncxx::builder::basic::kvp("url", url_));
     doc.append(bsoncxx::builder::basic::kvp("title", title_));
@@ -110,5 +111,5 @@ bsoncxx::builder::basic::document&& BSONPage::get_bson() const {
         headings.append(heading);
     }
     doc.append(bsoncxx::builder::basic::kvp("headings", headings));
-    return std::move(doc);
+    return doc.extract();
 }

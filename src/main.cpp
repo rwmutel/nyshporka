@@ -10,8 +10,6 @@
 #include <queue>
 #include <map>
 #include <filesystem>
-#include <bsoncxx/json.hpp>
-#include <mongocxx/cursor.hpp>
 #include <mongocxx/instance.hpp>
 #include "config_parser.h"
 #include "exceptions.h"
