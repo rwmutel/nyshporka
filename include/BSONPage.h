@@ -8,20 +8,28 @@
 
 #include <string>
 #include <vector>
+#include <set>
 #include <bsoncxx/builder/basic/document.hpp>
 
 class BSONPage {
 private:
     std::string url_;
     std::string title_{"No title"};
-    std::vector<std::string> links_;
+    std::set<std::string> links_;
     std::vector<std::string> headings_;
+    std::string lang_;
     void parse_page();
-    void parse_headers();
+    void parse_headings(const std::string& str);
+    void parse_links(const std::string& str);
+    void parse_lang(const std::string& str);
+    void parse_title(const std::string& str);
+    void get_text(std::string& text) const;
+    static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
 public:
-    BSONPage(std::string url);
-    bsoncxx::builder::basic::document get_bson();
-    std::vector<std::string> get_links();
+    explicit BSONPage(std::string url);
+    [[nodiscard]] bsoncxx::builder::basic::document&& get_bson() const;
+    [[nodiscard]] const std::set<std::string>& get_links() const;
+    [[nodiscard]] const std::string& get_lang() const;
 };
 
 
