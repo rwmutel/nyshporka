@@ -25,7 +25,7 @@ mongocxx::result::insert_one DBConnector::insert_page(std::string& title) {
         col.create_index(bb::make_document(bb::kvp("page_title", "text")));
         index_present = true;
     }
-    return col.insert_one(bb::make_document(bb::kvp("page_title", title))).get();
+    return col.insert_one(bb::make_document(bb::kvp("page_title", title))).value();
 }
 
 mongocxx::cursor DBConnector::full_text_search(std::string& query) {
