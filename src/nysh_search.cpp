@@ -12,7 +12,6 @@ void exit_handler(int signum) {
 int main (int argc, char *argv[]) {
     std::signal(SIGINT, exit_handler);
     std::cout << "Welcome to nysh-search!" << std::endl;
-    std::cout << "Enter your search prompt and get the pages, crawled by nyshporka crawler!" << std::endl;
     std::string user_input;
     std::string db_name = "nysh_pages";
     std::string col_name = "pages_0_1";
@@ -29,21 +28,28 @@ int main (int argc, char *argv[]) {
         }
     }
     auto db_connection = DBConnector(db_name, col_name, db_uri);
+
+    std::cout << "Enter your search prompt and get the pages, crawled by nyshporka crawler!" << std::endl;
+    std::cout << "> ";
+
     while (true) {
         std::getline(std::cin, user_input);
         auto results = db_connection.full_text_search(user_input);
         try {
             if (results.begin() == results.end()) {
                 std::cout << "No indexed pages for your prompt :(" << std::endl;
+                std::cout << "> ";
             }
             else {
                 for (auto &x: results) {
                     std::cout << bsoncxx::to_json(x) << std::endl;
                 }
+                std::cout << "> ";
             }
         }
         catch (mongocxx::logic_error& e) {
             std::cout << "Search failed: " << e.what() << std::endl;
+            std::cout << "> ";
         }
     }
 }
