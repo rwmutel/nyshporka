@@ -5,6 +5,7 @@ cmake_minimum_required(VERSION 3.15)
 #! CHANGE YOUR PROJECT NAME
 #  It is used as your project's main executable name. 
 set(PROJECT_NAME nyshporka)
+set(SEARCHER_NAME nysh_search)
 project(${PROJECT_NAME} C CXX) # project(${PROJECT_NAME} C CXX ASM)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -63,9 +64,15 @@ add_executable(
 		src/db_connector.cpp include/db_connector.h
 )
 
+add_executable(
+		${SEARCHER_NAME} src/nysh_search.cpp
+		include/db_connector.h src/db_connector.cpp
+)
+
 
 #! Put path to your project headers
 target_include_directories(${PROJECT_NAME} PRIVATE include)
+target_include_directories(${SEARCHER_NAME} PRIVATE include)
 
 #! Add external packages
 # options_parser requires boost::program_options library
@@ -79,13 +86,17 @@ find_package(CURL REQUIRED)
 target_include_directories(${PROJECT_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${CURL_LIBRARIES})
 
-find_package(libmongocxx REQUIRED)
+find_package(mongocxx REQUIRED)
 target_include_directories(${PROJECT_NAME} PRIVATE ${LIBMONGOCXX_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} ${LIBMONGOCXX_LIBRARIES})
+target_include_directories(${SEARCHER_NAME} PRIVATE ${LIBMONGOCXX_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} mongo::mongocxx_shared)
+target_link_libraries(${SEARCHER_NAME} mongo::mongocxx_shared)
 
-find_package(libbsoncxx REQUIRED)
+find_package(bsoncxx REQUIRED)
 target_include_directories(${PROJECT_NAME} PRIVATE ${LIBBSONCXX_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} ${LIBBSONCXX_LIBRARIES})
+target_include_directories(${SEARCHER_NAME} PRIVATE ${LIBBSONCXX_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} mongo::bsoncxx_shared)
+target_link_libraries(${SEARCHER_NAME} mongo::bsoncxx_shared)
 ##########################################################
 # Fixed CMakeLists.txt part 
 ##########################################################
