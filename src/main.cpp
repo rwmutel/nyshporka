@@ -125,14 +125,9 @@ int main(int argc, char* argv[]) {
 //        std::cerr << "Error opening file at " << output_file << std::endl;
 //        exit(OUTPUT_FILE_OPENING_ERROR);
 //    }
-    for (const auto& [url, title] : titles) {
-        std::cout << url << " " << title << std::endl;
-    }
-    std::cout << std::endl;
-    auto q = std::string{"нерв"};
-    auto results = db_connection.full_text_search(q);
-    for (auto& x: results) {
-        std::cout << bsoncxx::to_json(x) << std::endl;
-    }
+//    for (const auto& [url, title] : titles) {
+//        std::cout << url << " " << title << std::endl;
+//    }
+//    std::cout << std::endl;
     return 0;
 }
