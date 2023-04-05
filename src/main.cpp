@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     auto seed_url = params["seed_webpages"].as<std::vector<std::string>>();
     auto max_pages = params["max_pages"].as<size_t>();
     auto allowed_domains = params["allowed_domains"].as<std::vector<std::string>>();
-//    auto output_file = params["output_file"].as<std::string>();
+    auto allowed_langs = params["allowed_langs"].as<std::vector<std::string>>();
 
     std::queue<std::string> linkQueue;
     std::set<std::string> visited;
@@ -87,20 +87,24 @@ int main(int argc, char* argv[]) {
 
         const std::regex url_re{R"!!(<\s*A\s+[^>]*href\s*=\s*"([^"]*)")!!", std::regex_constants::icase};
         const std::regex title_re{R"!!(<\s*title\s*>([^<]*)<\s*/\s*title\s*>)!!", std::regex_constants::icase};
-        const std::regex headings_re{R"!!((<\s*h[1-6]\s*>([^<]*)<\s*/\s*h[1-6]\s*>))!!", std::regex_constants::icase};
+        const std::regex lang_re{R"!!(<\s*html\s+[^>]*lang\s*=\s*"([^"]*)")!!", std::regex_constants::icase};
 
         std::smatch match;
         if (std::regex_search(str, match, title_re)) {
             std::cout << "Title: " << match[1] << std::endl;
             titles[curr_url] = match[1];
         }
-        if (std::regex_search(str, match, headings_re)) {
-//            std::cout << "Headings: " << match[3] << std::endl;
-            titles[curr_url] += match[3];
+        if (std::regex_search(str, match, lang_re)) {
+            std::cout << "Lang: " << match[1] << std::endl;
+            if (std::find(allowed_langs.begin(), allowed_langs.end(), match[1]) == allowed_langs.end()) {
+                continue;
+            }
         }
+
         if (titles[curr_url].empty()) {
             titles[curr_url] = "No title";
         }
+
         db_connection.insert_page(titles[curr_url]);
 
         std::set<std::string> urls = {
@@ -108,26 +112,19 @@ int main(int argc, char* argv[]) {
                 std::sregex_token_iterator()
         };
 
+        bool within_allowed_domain;
+
         for (const auto &url: urls) {
-            if (url.find("http") == 0 && visited.find(url) == visited.end() && std::find_if(allowed_domains.begin(), allowed_domains.end(),
-                                                                                         [&url](const std::string &domain) {
-                                                                                             return url.find(domain) != std::string::npos;
-                                                                                         }) != allowed_domains.end()) {
-//                std::cout << url << std::endl;
+            within_allowed_domain = (std::find_if(allowed_domains.begin(), allowed_domains.end(),
+                                                 [&url](const std::string &domain) {
+                                                     return url.find(domain) != std::string::npos;
+                                                 }) != allowed_domains.end());
+
+            if (url.find("http") == 0 && visited.find(url) == visited.end() && within_allowed_domain) {
                 linkQueue.emplace(url);
             }
         }
         ++visited_pages;
     }
-
-//    std::ofstream output{output_file};
-//    if (output.fail()) {
-//        std::cerr << "Error opening file at " << output_file << std::endl;
-//        exit(OUTPUT_FILE_OPENING_ERROR);
-//    }
-//    for (const auto& [url, title] : titles) {
-//        std::cout << url << " " << title << std::endl;
-//    }
-//    std::cout << std::endl;
     return 0;
 }

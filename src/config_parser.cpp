@@ -17,7 +17,8 @@ po::variables_map parse_config(std::ifstream& src) {
             ("seed_webpages", po::value<std::vector<std::string>>(), "webpages to push into the task queue initially")
             ("max_pages", po::value<size_t>(), "max pages to parse")
             ("out_file", po::value<std::string>(), "file to write results to")
-            ("allowed_domains", po::value<std::vector<std::string>>(), "domains to parse");
+            ("allowed_domains", po::value<std::vector<std::string>>(), "domains to parse")
+            ("allowed_langs", po::value<std::vector<std::string>>(), "allowed languages");
 
     po::variables_map vm;
     try {
