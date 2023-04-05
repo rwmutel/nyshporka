@@ -28,12 +28,13 @@ void BSONPage::get_text(std::string& text) const {
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &BSONPage::write_data);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &text);
         auto res = curl_easy_perform(curl);
-        curl_easy_cleanup(curl);
         if (res != CURLE_OK) {
+            curl_easy_cleanup(curl);
             throw(std::runtime_error("Error while parsing " + url_));
         }
         long http_code = 0;
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+        curl_easy_cleanup(curl);
         if (200 > http_code || http_code >= 300) {
             throw(std::runtime_error("Error while parsing " + url_ + " HTTP code: " + std::to_string(http_code)));
         }
@@ -43,6 +44,7 @@ void BSONPage::get_text(std::string& text) const {
 void BSONPage::parse_page() {
     std::string str;
     get_text(str);
+//    std::cout<< str << std::endl;
     parse_title(str);
     parse_lang(str);
     parse_links(str);
@@ -50,7 +52,7 @@ void BSONPage::parse_page() {
 }
 
 void BSONPage::parse_links(const std::string& str) {
-    const std::regex url_re{R"!!(<\s*A\s+[^>]*href\s*=\s*"(http[^"]*)")!!", std::regex_constants::icase};
+    const std::regex url_re{R"!!(<\s*a\s+[^>]*href\s*=\s*"(http[^;|"]*))!!", std::regex_constants::icase};
     links_ = std::set<std::string>{std::sregex_token_iterator(str.cbegin(), str.cend(), url_re, 1),
                                    std::sregex_token_iterator()};
 }
@@ -83,7 +85,7 @@ void BSONPage::parse_headings(const std::string &str) {
         auto curr_heading = match[1].str();
         curr_heading = std::regex_replace(curr_heading, std::regex(R"!!((<.+?(?=>)>|<\/.+?>|\/doc))!!"), "");
         headings_.emplace_back(curr_heading);
-        std::cout<< curr_heading << std::endl;
+//        std::cout<< curr_heading << std::endl;
         search_start = match.suffix().first;
     }
 }

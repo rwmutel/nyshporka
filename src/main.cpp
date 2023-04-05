@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
         std::string curr_url = linkQueue.front();
         visited.emplace(curr_url);
         linkQueue.pop();
-        std::cout << "Parsing: " << curr_url << std::endl;
+//        std::cout << "Parsing: " << curr_url << std::endl;
 
         try {
             BSONPage page{curr_url};
@@ -72,6 +72,7 @@ int main(int argc, char* argv[]) {
                                                                return url.find(domain) != std::string::npos;
                                                            }) != allowed_domains.end());
 
+//                std::cout << "Found link: " << url << std::endl;
                 if (visited.find(url) == visited.end() && within_allowed_domain) {
                     linkQueue.emplace(url);
                     visited.emplace(url);
