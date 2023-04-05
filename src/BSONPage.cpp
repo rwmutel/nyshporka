@@ -51,7 +51,7 @@ void BSONPage::parse_page() {
 }
 
 void BSONPage::parse_links(const std::string& str) {
-    const std::regex url_re{R"!!(<\s*A\s+[^>]*href\s*=\s*"([^"]*)")!!", std::regex_constants::icase};
+    const std::regex url_re{R"!!(<\s*A\s+[^>]*href\s*=\s*"http([^"]*)")!!", std::regex_constants::icase};
     links_ = {
             std::sregex_token_iterator(str.begin(), str.end(), url_re, 1),
             std::sregex_token_iterator()
@@ -95,7 +95,7 @@ const std::string& BSONPage::get_lang() const {
     return lang_;
 }
 
-bsoncxx::builder::basic::document&& BSONPage::get_bson() const {
+bsoncxx::document::value&& BSONPage::get_bson() const {
     bsoncxx::builder::basic::document doc{};
     doc.append(bsoncxx::builder::basic::kvp("url", url_));
     doc.append(bsoncxx::builder::basic::kvp("title", title_));
@@ -110,5 +110,5 @@ bsoncxx::builder::basic::document&& BSONPage::get_bson() const {
         headings.append(heading);
     }
     doc.append(bsoncxx::builder::basic::kvp("headings", headings));
-    return std::move(doc);
+    return std::move(doc.extract());
 }

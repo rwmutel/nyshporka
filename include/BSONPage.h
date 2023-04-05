@@ -27,7 +27,7 @@ private:
     static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
 public:
     explicit BSONPage(std::string url);
-    [[nodiscard]] bsoncxx::builder::basic::document&& get_bson() const;
+    [[nodiscard]] bsoncxx::document::value&& get_bson() const;
     [[nodiscard]] const std::set<std::string>& get_links() const;
     [[nodiscard]] const std::string& get_lang() const;
 };
