@@ -72,8 +72,9 @@ int main(int argc, char* argv[]) {
                                                                return url.find(domain) != std::string::npos;
                                                            }) != allowed_domains.end());
 
-                if (url.find("http") == 0 && visited.find(url) == visited.end() && within_allowed_domain) {
+                if (visited.find(url) == visited.end() && within_allowed_domain) {
                     linkQueue.emplace(url);
+                    visited.emplace(url);
                 }
             }
             ++visited_pages;
