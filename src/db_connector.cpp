@@ -22,10 +22,14 @@ DBConnector::DBConnector(
 }
 
 mongocxx::result::insert_one DBConnector::insert_page(
-        bsoncxx::view_or_value<bsoncxx::document::view, bsoncxx::document::value>&& document
+        bsoncxx::view_or_value<bsoncxx::document::view, bsoncxx::document::value> document
         ) {
     if (!index_present) {
-        col.create_index(bb::make_document(bb::kvp("title", "text")));
+        col.create_index(bb::make_document(
+                bb::kvp("title", "text"),
+                bb::kvp("headings", "text")
+            )
+        );
         index_present = true;
     }
     return col.insert_one(std::move(document)).value();
