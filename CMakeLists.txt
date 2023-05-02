@@ -81,6 +81,7 @@ target_include_directories(${MANAGER_NAME} PRIVATE include)
 target_include_directories(${SEARCHER_NAME} PRIVATE include)
 target_include_directories(${CRAWLER_NAME} PRIVATE include)
 
+
 #! Add external packages
 # options_parser requires boost::program_options library
 find_package(Boost 1.71.0 COMPONENTS program_options system locale REQUIRED)
@@ -89,9 +90,8 @@ target_link_libraries(${MANAGER_NAME} Boost::program_options Boost::system)
 set(Boost_USE_STATIC_LIBS OFF) # enable dynamic linking
 set(Boost_USE_MULTITHREAD ON)
 
-find_package(CURL REQUIRED)
-target_include_directories(${MANAGER_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
-target_link_libraries(${MANAGER_NAME} ${CURL_LIBRARIES})
+find_package(cpr REQUIRED)
+target_link_libraries(${MANAGER_NAME} cpr::cpr)
 
 find_package(mongocxx REQUIRED)
 target_include_directories(${MANAGER_NAME} PRIVATE ${LIBMONGOCXX_INCLUDE_DIRS})
