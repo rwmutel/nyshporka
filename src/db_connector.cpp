@@ -21,7 +21,7 @@ DBConnector::DBConnector(
     col = database[collection_name];
 }
 
-mongocxx::result::insert_one DBConnector::insert_page(
+bool DBConnector::insert_page(
         bsoncxx::view_or_value<bsoncxx::document::view, bsoncxx::document::value> document
         ) {
     if (!index_present) {
@@ -32,7 +32,14 @@ mongocxx::result::insert_one DBConnector::insert_page(
         );
         index_present = true;
     }
-    return col.insert_one(std::move(document)).value();
+    if (!col.find_one(bb::make_document(bb::kvp("title", document.view()["title"].get_string().value)))) {
+        col.insert_one(std::move(document)).value();
+        return true;
+    }
+    else {
+        std::cout << document.view()["title"].get_string().value << " is already in the collection!" << std::endl;
+        return false;
+    }
 }
 
 mongocxx::cursor DBConnector::full_text_search(std::string& query) {

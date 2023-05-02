@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
         std::string curr_url = linkQueue.front();
         visited.emplace(curr_url);
         linkQueue.pop();
-//        std::cout << "Parsing: " << curr_url << std::endl;
+        std::cout << "Parsing: " << curr_url << std::endl;
 
         try {
             BSONPage page{curr_url};
@@ -64,7 +64,9 @@ int main(int argc, char* argv[]) {
                 continue;
             }
 
-            db_connection.insert_page(page.get_bson());
+            if (db_connection.insert_page(page.get_bson())) {
+                ++visited_pages;
+            }
 
             for (const auto &url: urls) {
                 auto within_allowed_domain = (std::find_if(allowed_domains.begin(), allowed_domains.end(),
@@ -78,7 +80,6 @@ int main(int argc, char* argv[]) {
                     visited.emplace(url);
                 }
             }
-            ++visited_pages;
         } catch (const std::exception &e) {
             std::cerr << e.what() << std::endl;
         }
