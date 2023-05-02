@@ -16,6 +16,7 @@ private:
 public:
     DBConnector(const std::string& database_name, const std::string& collection_name,
                 const std::string& uri_str = std::string("mongodb://localhost:27017"));
+    DBConnector();
     bool insert_page(
             bsoncxx::view_or_value<bsoncxx::document::view, bsoncxx::document::value> document // should be by ref in future
             );

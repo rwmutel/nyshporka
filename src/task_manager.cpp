@@ -11,27 +11,56 @@
 #include <map>
 #include <filesystem>
 #include <mongocxx/instance.hpp>
+#include <mongocxx/exception/exception.hpp>
 #include "config_parser.h"
 #include "exceptions.h"
 #include "db_connector.h"
 #include "BSONPage.h"
 
 
-std::string parse_argv(int argc, char* argv[]) {
-    if (argc != 2) {
-        std::cerr << "Wrong number of arguments" << std::endl;
+std::vector<std::string> parse_argv(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cerr << "Wrong number of arguments!" << std::endl;
+        std::cerr << "Possible usages: " << std::endl;
+        std::cerr << "./task_manager <config-file-name> <mongodb-database> <mongodb-collection> <mongodb-uri>"
+            << std::endl;
+        std::cerr << "<config-file-name> is necessary!" << std::endl;
         exit(WRONG_ARGUMENTS_COUNT);
     }
-    return std::string{argv[1]};
+    std::vector<std::string> argvector{};
+    for (size_t i = 1; i < argc; i++) {
+        argvector.emplace_back(argv[i]);
+        std::cout << argv[i] << std::endl;
+    }
+    return argvector;
 }
 
 int main(int argc, char* argv[]) {
     std::string db_name{"nysh_pages"};
     std::string col_name{"pages_0_1"};
-    auto db_connection = DBConnector(db_name, col_name);
+    std::string db_uri{"mongodb://localhost:27017"};
 
-    auto config_file_name = parse_argv(argc, argv);
+    auto argvector = parse_argv(argc, argv);
+    auto config_file_name = argvector[0];
     auto config_file = std::ifstream{config_file_name};
+
+    if (argc > 2) {
+        db_name = argvector[2];
+    }
+    if (argc > 3) {
+        col_name = argvector[3];
+    }
+    if (argc > 4) {
+        db_uri = argvector[1];
+    }
+    DBConnector db_connection;
+    try {
+        db_connection = DBConnector(db_name, col_name, db_uri);
+    }
+    catch (mongocxx::exception& e){
+        std::cerr << "Error connecting to database" << std::endl;
+        exit(DB_CONNECTION_ERROR);
+    }
     if (config_file.fail()) {
         std::cerr << "Error opening file at " << config_file_name << std::endl;
         exit(CONFIG_FILE_OPENING_ERROR);

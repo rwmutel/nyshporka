@@ -5,6 +5,7 @@
 #include <mongocxx/cursor.hpp>
 #include <mongocxx/stdx.hpp>
 #include <mongocxx/uri.hpp>
+#include <mongocxx/exception/exception.hpp>
 #include <utility>
 #include "db_connector.h"
 
@@ -16,10 +17,17 @@ DBConnector::DBConnector(
         const std::string& uri_str
         ) {
     mongocxx::uri uri(uri_str);
-    client = mongocxx::client(uri);
-    database = client[database_name];
-    col = database[collection_name];
+    try {
+        client = mongocxx::client(uri);
+        database = client[database_name];
+        col = database[collection_name];
+    }
+    catch (mongocxx::exception& e) {
+        throw e;
+    }
 }
+
+DBConnector::DBConnector() = default;;
 
 bool DBConnector::insert_page(
         bsoncxx::view_or_value<bsoncxx::document::view, bsoncxx::document::value> document
