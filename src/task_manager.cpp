@@ -62,12 +62,13 @@ int main(int argc, char* argv[]) {
     }
 
     oneapi::tbb::concurrent_queue<std::string> link_queue;
+    auto seed_file = params["seed_file"].as<std::string>();
+
     {
         auto seed_vector = params["seed_webpages"].as<std::vector<std::string>>();
         for (auto& x: seed_vector) {
             link_queue.push(x);
         }
-        auto seed_file = params["seed_file"].as<std::string>();
         std::ifstream seed_file_stream{seed_file};
         if (seed_file_stream.is_open()) {
             std::string line;
@@ -106,8 +107,6 @@ int main(int argc, char* argv[]) {
             allowed_domains.end(), get_domain(link.s())) != allowed_domains.end()) {
                 link_queue.push(link.s());
                 visited.insert(link.s());
-                std::ofstream visited_file{args[1], std::ios_base::app};
-                visited_file << link.s() << std::endl;
                 ++i;
             }
         }
@@ -125,6 +124,29 @@ int main(int argc, char* argv[]) {
         config_json["col_name"] = params["col_name"].as<std::string>();
 
         return crow::response(200, config_json);
+    });
+
+    CROW_ROUTE(app, "/terminate/")([&link_queue, &seed_file, &args, &visited](){
+        std::stringstream log;
+        log << "Task Manager terminated.";
+        CROW_LOG_INFO << log.str();
+
+        std::remove(seed_file.c_str());
+        std::ofstream seed_file_stream{seed_file};
+        while (!link_queue.empty()) {
+            std::string link;
+            link_queue.try_pop(link);
+            seed_file_stream << link << std::endl;
+        }
+
+        std::ofstream visited_file{args[1], std::ios_base::app};
+        for (auto& x: visited) {
+            visited_file << x << std::endl;
+        }
+
+        exit(0);
+
+        return crow::response(200);
     });
 
     auto a_ = app.port(18082).multithreaded().run_async();
