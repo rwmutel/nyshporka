@@ -3,19 +3,14 @@
 
 #include <iostream>
 #include <string>
-#include <fstream>
 #include <regex>
 #include <set>
 #include <queue>
-#include <map>
 #include <filesystem>
-#include <mongocxx/instance.hpp>
-#include <mongocxx/exception/exception.hpp>
 #include <crow.h>
 #include "config_parser.h"
 #include "exceptions.h"
 #include "db_connector.h"
-#include "BSONPage.h"
 
 
 std::vector<std::string> parse_argv(int argc, char* argv[]) {
@@ -45,12 +40,16 @@ int main(int argc, char* argv[]) {
     while (links >> link) {
         link_queue.push(link);
     }
-    CROW_ROUTE(app, "/pages/get/<uint>")([&link_queue](size_t link_count){
+    CROW_ROUTE(app, "/pages/get/<uint>")([&link_queue, &visited](size_t link_count){
         size_t queue_size = link_queue.size();
         link_count = (link_count > queue_size) ? queue_size : link_count;
         std::vector<crow::json::wvalue> links;
         for (size_t i = 0; i < link_count; i++) {
-            links.emplace_back(link_queue.front());
+            auto link = link_queue.front();
+            if (visited.find(link) == visited.end()) {
+                links.emplace_back(link);
+                visited.insert(link);
+            }
             link_queue.pop();
         }
         crow::json::wvalue response = links;
