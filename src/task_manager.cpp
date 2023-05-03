@@ -25,7 +25,6 @@ std::vector<std::string> parse_argv(int argc, char* argv[]) {
     std::vector<std::string> argvector{};
     for (size_t i = 1; i < argc; i++) {
         argvector.emplace_back(argv[i]);
-        std::cout << argv[i] << std::endl;
     }
     return argvector;
 }
@@ -33,13 +32,22 @@ std::vector<std::string> parse_argv(int argc, char* argv[]) {
 int main(int argc, char* argv[]) {
     crow::SimpleApp app;
 
-    std::queue<std::string> link_queue;
-    std::set<std::string> visited;
-    std::ifstream links{argv[1]};
-    std::string link;
-    while (links >> link) {
-        link_queue.push(link);
+    std::string config_file_name = parse_argv(argc, argv)[0];
+    std::ifstream config_file{config_file_name};
+    if (config_file.fail()) {
+        std::cerr << "Error opening file at " << config_file_name << std::endl;
+        exit(CONFIG_FILE_OPENING_ERROR);
     }
+    po::variables_map params = parse_config(config_file);
+    std::queue<std::string> link_queue;
+    {
+        auto seed_vector = params["seed_webpages"].as<std::vector<std::string>>();
+        for (auto x: seed_vector) {
+            link_queue.push(x);
+        }
+    }
+    std::set<std::string> visited;
+
     CROW_ROUTE(app, "/pages/get/<uint>")([&link_queue, &visited](size_t link_count){
         size_t queue_size = link_queue.size();
         link_count = (link_count > queue_size) ? queue_size : link_count;
@@ -74,6 +82,14 @@ int main(int argc, char* argv[]) {
         CROW_LOG_INFO << log.str();
         return crow::response(200);
     });
+
+    CROW_ROUTE(app, "/config/")([&params](){
+        crow::json::wvalue config_json;
+        config_json["allowed_domains"] = params["allowed_domains"].as<std::vector<std::string>>();
+        config_json["allowed_langs"] = params["allowed_langs"].as<std::vector<std::string>>();
+        return crow::response(200, config_json);
+    });
+
     auto a_ = app.port(18082).run_async();
     return 0;
 }
