@@ -12,15 +12,26 @@
 using namespace std::literals;
 
 enum {
-    TASK_MANAGER_ERROR = 1
+    TASK_MANAGER_ERROR = 1,
+    WRONG_ARGUMENTS_COUNT = 2,
 };
-constexpr auto pages_per_task = 32;
-const std::string task_manager_address = "http://localhost:18082";
-const std::string db_address = "mongodb://localhost:27017";
-const std::string db_name = "nysh_pages";
-const std::string col_name = "pages_0_1";
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (argc != 3)
+        return WRONG_ARGUMENTS_COUNT;
+    auto pages_per_task = std::stoi(argv[1]);
+    std::string task_manager_address{argv[2]};
+
+    auto config_response = cpr::Get(cpr::Url{task_manager_address + "/config/"});
+    auto config_json = crow::json::load(config_response.text);
+
+    auto db_address = config_json["db_address"].s();
+    auto db_name = config_json["db_name"].s();
+    auto col_name = config_json["col_name"].s();
+
+    auto allowed_langs = config_json["allowed_langs"];
+    auto allowed_langs_vec = allowed_langs.lo();
+
     while (true) {
         auto response = cpr::Get(cpr::Url{task_manager_address + "/pages/get/" + std::to_string(pages_per_task)});
 
@@ -43,7 +54,7 @@ int main() {
                     static size_t i = 0;
                     if (i >= links_vec.size()) {
                         fc.stop();
-                        return "";
+                        return ""s;
                     }
                     return links_vec[i++];
                 }
@@ -54,6 +65,8 @@ int main() {
                 [&](std::string link) -> std::shared_ptr<BSONPage> {
                     try {
                         auto res = std::make_shared<BSONPage>(std::move(link));
+                        if (std::find(allowed_langs_vec.begin(), allowed_langs_vec.end(),
+                        res->get_lang()) == allowed_langs_vec.end()) return nullptr;
                         return res;
                     } catch (const std::exception &e) {
                         std::cerr << "Error downloading page " << link << ": " << e.what() << std::endl;
@@ -89,12 +102,12 @@ int main() {
 
         crow::json::wvalue links_json = links_vector;
 
-//        std::cout << links_json.dump() << std::endl;
+        std::cout << "Sending " << links_json.dump() << std::endl;
 
         cpr::Get(cpr::Url{task_manager_address + "/pages/add"}, cpr::Body{links_json.dump()},
                       cpr::Header{{"Content-Type", "application/json"}});
 
-        std::this_thread::sleep_for(10ms);
+        std::this_thread::sleep_for(100ms);
     }
     return 0;
 }
