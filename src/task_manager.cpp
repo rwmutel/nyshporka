@@ -12,7 +12,6 @@
 #include <oneapi/tbb/concurrent_queue.h>
 #include <oneapi/tbb/concurrent_unordered_set.h>
 
-
 std::vector<std::string> parse_argv(int argc, char* argv[]) {
     if (argc < 2) {
         std::cerr << "Wrong number of arguments!" << std::endl;
@@ -29,12 +28,13 @@ std::vector<std::string> parse_argv(int argc, char* argv[]) {
     return argvector;
 }
 
-std::string get_domain(std::string url) {
+std::string get_domain(const std::string& url) {
     std::regex domain_regex(R"(^(?:https?:\/\/)?(?:[^@\n]+@)?(?:www\.)?([^:\/\n?]+))");
     std::smatch match;
     std::regex_search(url, match, domain_regex);
     return match[1];
 }
+
 
 int main(int argc, char* argv[]) {
     crow::SimpleApp app;
@@ -61,15 +61,23 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    tbb::concurrent_queue<std::string> link_queue;
+    oneapi::tbb::concurrent_queue<std::string> link_queue;
     {
         auto seed_vector = params["seed_webpages"].as<std::vector<std::string>>();
         for (auto& x: seed_vector) {
             link_queue.push(x);
         }
+        auto seed_file = params["seed_file"].as<std::string>();
+        std::ifstream seed_file_stream{seed_file};
+        if (seed_file_stream.is_open()) {
+            std::string line;
+            while (seed_file_stream >> line) {
+                link_queue.push(line);
+            }
+        }
     }
 
-    CROW_ROUTE(app, "/pages/get/<uint>")([&link_queue, &visited](size_t link_count){
+    CROW_ROUTE(app, "/pages/get/<uint>")([&link_queue](size_t link_count){
         size_t queue_size = link_queue.unsafe_size();
         link_count = (link_count > queue_size) ? queue_size : link_count;
         std::vector<crow::json::wvalue> links;
@@ -85,7 +93,7 @@ int main(int argc, char* argv[]) {
         return crow::response(200, response);
     });
 
-    CROW_ROUTE(app, "/pages/add")([&link_queue, &visited, &allowed_domains](const crow::request& req){
+    CROW_ROUTE(app, "/pages/add")([&link_queue, &visited, &allowed_domains, &args](const crow::request& req){
         auto crawler_response = crow::json::load(req.body);
         if (crawler_response.t() != crow::json::type::List) {
             CROW_LOG_ERROR << "Crawler returned invalid JSON. Request body must be a JSON List";
@@ -98,12 +106,13 @@ int main(int argc, char* argv[]) {
             allowed_domains.end(), get_domain(link.s())) != allowed_domains.end()) {
                 link_queue.push(link.s());
                 visited.insert(link.s());
-                std::ofstream visited_file{"visited.txt", std::ios_base::app};
+                std::ofstream visited_file{args[1], std::ios_base::app};
                 visited_file << link.s() << std::endl;
+                ++i;
             }
         }
         std::stringstream log;
-        log << "Task Manager received " << new_links.size() << " links.";
+        log << "Task Manager received " << i << " links.";
         CROW_LOG_INFO << log.str();
         return crow::response(200);
     });
@@ -118,6 +127,6 @@ int main(int argc, char* argv[]) {
         return crow::response(200, config_json);
     });
 
-    auto a_ = app.port(18082).run_async();
+    auto a_ = app.port(18082).multithreaded().run_async();
     return 0;
 }

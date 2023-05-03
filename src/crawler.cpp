@@ -8,6 +8,7 @@
 #include "BSONPage.h"
 #include "db_connector.h"
 #include <chrono>
+#include <csignal>
 
 using namespace std::literals;
 
@@ -16,7 +17,9 @@ enum {
     WRONG_ARGUMENTS_COUNT = 2,
 };
 
+
 int main(int argc, char *argv[]) {
+
     if (argc != 3)
         return WRONG_ARGUMENTS_COUNT;
     auto pages_per_task = std::stoi(argv[1]);
@@ -48,10 +51,10 @@ int main(int argc, char *argv[]) {
             return TASK_MANAGER_ERROR;
         }
 
+        int i = 0;
         auto links_filter = tbb::make_filter<void, std::string>(
                 tbb::filter_mode::serial_in_order,
-                [&links_vec](tbb::flow_control &fc) -> std::string {
-                    static size_t i = 0;
+                [&links_vec, &i](tbb::flow_control &fc) -> std::string {
                     if (i >= links_vec.size()) {
                         fc.stop();
                         return ""s;

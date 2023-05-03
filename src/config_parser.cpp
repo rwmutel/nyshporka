@@ -19,7 +19,8 @@ po::variables_map parse_config(std::ifstream& src) {
             ("allowed_langs", po::value<std::vector<std::string>>(), "allowed languages")
             ("db_address", po::value<std::string>(), "address of db")
             ("db_name", po::value<std::string>(), "name of db")
-            ("col_name", po::value<std::string>(), "collection name");
+            ("col_name", po::value<std::string>(), "collection name")
+            ("seed_file", po::value<std::string>(), "seed file");
 
     po::variables_map vm;
     try {
