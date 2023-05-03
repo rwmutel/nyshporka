@@ -25,10 +25,11 @@ private:
     void parse_title(const std::string& str);
     [[nodiscard]] std::string get_text() const;
 public:
-    explicit BSONPage(std::string url);
+    explicit BSONPage(std::string&& url);
     [[nodiscard]] bsoncxx::document::value get_bson() const;
     [[nodiscard]] const std::set<std::string>& get_links() const;
     [[nodiscard]] const std::string& get_lang() const;
+    [[nodiscard]] const std::string& get_url() const;
 };
 
 

@@ -8,7 +8,7 @@
 #include <iostream>
 #include <bsoncxx/builder/basic/array.hpp>
 
-BSONPage::BSONPage(std::string url) : url_(std::move(url)) {
+BSONPage::BSONPage(std::string&& url) : url_(std::move(url)) {
     parse_page();
 }
 
@@ -84,6 +84,10 @@ const std::set<std::string>& BSONPage::get_links() const {
 
 const std::string& BSONPage::get_lang() const {
     return lang_;
+}
+
+const std::string& BSONPage::get_url() const {
+    return url_;
 }
 
 bsoncxx::document::value BSONPage::get_bson() const {
