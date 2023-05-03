@@ -5,7 +5,6 @@
 #include <oneapi/tbb/concurrent_unordered_set.h>
 #include <thread>
 #include <memory>
-#include <boost/json.hpp>
 #include "BSONPage.h"
 #include "db_connector.h"
 #include <chrono>
@@ -25,12 +24,12 @@ int main() {
     while (true) {
         auto response = cpr::Get(cpr::Url{task_manager_address + "/pages/get/" + std::to_string(pages_per_task)});
 
-        auto json = boost::json::parse(response.text);
+        auto json = crow::json::load(response.text);
 
         std::vector<std::string> links_vec;
 
-        for (auto &x: json.as_array()) {
-            links_vec.push_back(boost::json::value_to<std::string>(x));
+        for (auto &x: json.lo()) {
+            links_vec.push_back(x.s());
         }
 
         if (response.status_code != 200) {
@@ -83,17 +82,16 @@ int main() {
         tbb::parallel_pipeline(std::thread::hardware_concurrency(),
                                links_filter & page_downloader_filter & db_connector_filter);
 
-        boost::json::array links_json;
-        links_json.reserve(links.size());
+        std::vector<crow::json::wvalue> links_vector;
         for (const auto &link: links) {
-            links_json.emplace_back(link);
+            links_vector.emplace_back(link);
         }
 
-        auto json_str = boost::json::serialize(links_json);
+        crow::json::wvalue links_json = links_vector;
 
-        std::cout << json_str << std::endl;
+//        std::cout << links_json.dump() << std::endl;
 
-        cpr::Get(cpr::Url{task_manager_address + "/pages/add"}, cpr::Body{json_str},
+        cpr::Get(cpr::Url{task_manager_address + "/pages/add"}, cpr::Body{links_json.dump()},
                       cpr::Header{{"Content-Type", "application/json"}});
 
         std::this_thread::sleep_for(10ms);
