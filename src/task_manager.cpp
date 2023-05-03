@@ -1,16 +1,13 @@
 // This is a personal academic project. Dear PVS-Studio, please check it.
 // PVS-Studio Static Code Analyzer for C, C++, C#, and Java: http://www.viva64.com
 
-#include <iostream>
 #include <string>
-#include <regex>
 #include <set>
 #include <queue>
 #include <filesystem>
 #include <crow.h>
 #include "config_parser.h"
 #include "exceptions.h"
-#include "db_connector.h"
 
 
 std::vector<std::string> parse_argv(int argc, char* argv[]) {
