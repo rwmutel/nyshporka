@@ -23,13 +23,13 @@ private:
     void parse_links(const std::string& str);
     void parse_lang(const std::string& str);
     void parse_title(const std::string& str);
-    void get_text(std::string& text) const;
-    static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
+    [[nodiscard]] std::string get_text() const;
 public:
-    explicit BSONPage(std::string url);
+    explicit BSONPage(std::string&& url);
     [[nodiscard]] bsoncxx::document::value get_bson() const;
     [[nodiscard]] const std::set<std::string>& get_links() const;
     [[nodiscard]] const std::string& get_lang() const;
+    [[nodiscard]] const std::string& get_url() const;
 };
 
 

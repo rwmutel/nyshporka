@@ -15,10 +15,12 @@ po::variables_map parse_config(std::ifstream& src) {
     po::options_description desc("Allowed options");
     desc.add_options()
             ("seed_webpages", po::value<std::vector<std::string>>(), "webpages to push into the task queue initially")
-            ("max_pages", po::value<size_t>(), "max pages to parse")
-            ("out_file", po::value<std::string>(), "file to write results to")
             ("allowed_domains", po::value<std::vector<std::string>>(), "domains to parse")
-            ("allowed_langs", po::value<std::vector<std::string>>(), "allowed languages");
+            ("allowed_langs", po::value<std::vector<std::string>>(), "allowed languages")
+            ("db_address", po::value<std::string>(), "address of db")
+            ("db_name", po::value<std::string>(), "name of db")
+            ("col_name", po::value<std::string>(), "collection name")
+            ("seed_file", po::value<std::string>(), "seed file");
 
     po::variables_map vm;
     try {
@@ -39,17 +41,6 @@ po::variables_map parse_config(std::ifstream& src) {
     catch (boost::bad_any_cast &e) {
         std::cerr << "Error in config file: " << e.what() << std::endl;
         exit(ERROR_IN_CONFIG_FILE);
-    }
-    std::array<std::string, 1> int_vars{"max_pages"};
-
-    for (const auto &var: int_vars) {
-        try {
-            vm[var].as<size_t>();
-        }
-        catch (boost::bad_any_cast &e) {
-            std::cerr << var << " variable must be integer" << std::endl;
-            exit(ERROR_IN_CONFIG_FILE);
-        }
     }
     return vm;
 }

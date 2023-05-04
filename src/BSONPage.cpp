@@ -3,48 +3,36 @@
 //
 
 #include "BSONPage.h"
-#include <curl/curl.h>
+#include <cpr/cpr.h>
 #include <regex>
 #include <iostream>
 #include <bsoncxx/builder/basic/array.hpp>
 
-BSONPage::BSONPage(std::string url) : url_(std::move(url)) {
+BSONPage::BSONPage(std::string&& url) : url_(std::move(url)) {
     parse_page();
 }
 
-size_t BSONPage::write_data(void *ptr, size_t size, size_t nmemb, void *stream) {
-    std::string data(reinterpret_cast<const char*>(ptr), static_cast<size_t>(size * nmemb));
-    reinterpret_cast<std::string*>(stream)->append(data);
-    return size * nmemb;
-}
-
-void BSONPage::get_text(std::string& text) const {
-    CURL *curl;
-    curl = curl_easy_init();
-    if (curl) {
-        curl_easy_setopt(curl, CURLOPT_URL, url_.c_str());
-        curl_easy_setopt(curl, CURLOPT_USERAGENT,
-                         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36");
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &BSONPage::write_data);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &text);
-        auto res = curl_easy_perform(curl);
-        if (res != CURLE_OK) {
-            curl_easy_cleanup(curl);
-            throw(std::runtime_error("Error while parsing " + url_));
-        }
-        long http_code = 0;
-        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-        curl_easy_cleanup(curl);
-        if (200 > http_code || http_code >= 300) {
-            throw(std::runtime_error("Error while parsing " + url_ + " HTTP code: " + std::to_string(http_code)));
-        }
+std::string BSONPage::get_text() const {
+    cpr::Response r;
+    try {
+        r = cpr::Get(cpr::Url{url_},
+                     cpr::Header{
+                             {"User-Agent",
+                                       "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36"}
+                     });
     }
+    catch (std::exception& e) {
+        throw (std::runtime_error("Error while parsing " + url_));
+    }
+    long http_code = r.status_code;
+    if (200 > http_code || http_code >= 300) {
+        throw(std::runtime_error("Error while parsing " + url_ + " HTTP code: " + std::to_string(http_code)));
+    }
+    return r.text;
 }
 
 void BSONPage::parse_page() {
-    std::string str;
-    get_text(str);
-//    std::cout<< str << std::endl;
+    std::string str = get_text();
     parse_title(str);
     parse_lang(str);
     parse_links(str);
@@ -96,6 +84,10 @@ const std::set<std::string>& BSONPage::get_links() const {
 
 const std::string& BSONPage::get_lang() const {
     return lang_;
+}
+
+const std::string& BSONPage::get_url() const {
+    return url_;
 }
 
 bsoncxx::document::value BSONPage::get_bson() const {

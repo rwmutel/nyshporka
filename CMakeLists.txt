@@ -72,7 +72,9 @@ add_executable(
 )
 
 add_executable(
-		${CRAWLER_NAME} src/crawler.cpp
+		${CRAWLER_NAME} src/crawler.cpp src/BSONPage.cpp
+		include/BSONPage.h include/exceptions.h
+		include/db_connector.h src/db_connector.cpp
 )
 
 
@@ -81,23 +83,29 @@ target_include_directories(${MANAGER_NAME} PRIVATE include)
 target_include_directories(${SEARCHER_NAME} PRIVATE include)
 target_include_directories(${CRAWLER_NAME} PRIVATE include)
 
+
 #! Add external packages
 # options_parser requires boost::program_options library
-find_package(Boost 1.71.0 COMPONENTS program_options system locale REQUIRED)
+find_package(Boost 1.71.0 COMPONENTS program_options system locale json REQUIRED)
 target_include_directories(${MANAGER_NAME} PRIVATE ${Boost_INCLUDE_DIR})
 target_link_libraries(${MANAGER_NAME} Boost::program_options Boost::system)
+target_link_libraries(${CRAWLER_NAME} Boost::json)
 set(Boost_USE_STATIC_LIBS OFF) # enable dynamic linking
 set(Boost_USE_MULTITHREAD ON)
 
-find_package(CURL REQUIRED)
-target_include_directories(${MANAGER_NAME} PRIVATE ${CURL_INCLUDE_DIRS})
-target_link_libraries(${MANAGER_NAME} ${CURL_LIBRARIES})
+include(FetchContent)
+FetchContent_Declare(cpr GIT_REPOSITORY https://github.com/libcpr/cpr.git
+		GIT_TAG 1.10.2) # The commit hash for 1.10.x. Replace with the latest from: https://github.com/libcpr/cpr/releases
+FetchContent_MakeAvailable(cpr)
+target_link_libraries(${MANAGER_NAME} cpr::cpr)
+target_link_libraries(${CRAWLER_NAME} cpr::cpr)
 
 find_package(mongocxx REQUIRED)
 target_include_directories(${MANAGER_NAME} PRIVATE ${LIBMONGOCXX_INCLUDE_DIRS})
 target_include_directories(${SEARCHER_NAME} PRIVATE ${LIBMONGOCXX_INCLUDE_DIRS})
 target_link_libraries(${MANAGER_NAME} mongo::mongocxx_shared)
 target_link_libraries(${SEARCHER_NAME} mongo::mongocxx_shared)
+target_link_libraries(${CRAWLER_NAME} mongo::mongocxx_shared)
 
 find_package(bsoncxx REQUIRED)
 target_include_directories(${MANAGER_NAME} PRIVATE ${LIBBSONCXX_INCLUDE_DIRS})
@@ -106,6 +114,18 @@ target_include_directories(${CRAWLER_NAME} PRIVATE ${LIBBSONCXX_INCLUDE_DIRS})
 target_link_libraries(${MANAGER_NAME} mongo::bsoncxx_shared)
 target_link_libraries(${SEARCHER_NAME} mongo::bsoncxx_shared)
 target_link_libraries(${CRAWLER_NAME} mongo::bsoncxx_shared)
+
+find_package(TBB)
+if(TBB_FOUND)
+	message(STATUS "Found TBB: ${TBB_INCLUDE_DIR}")
+
+	if (NOT TBB_FIND_QUIETLY)
+		message(STATUS "Found TBB: ${TBB_INCLUDE_DIRS}")
+	endif()
+endif()
+target_link_libraries(${CRAWLER_NAME} TBB::tbb)
+target_link_libraries(${MANAGER_NAME} TBB::tbb)
+
 ##########################################################
 # Fixed CMakeLists.txt part 
 ##########################################################
