@@ -45,7 +45,7 @@ bool DBConnector::insert_page(
         return true;
     }
     else {
-        std::cout << document.view()["title"].get_string().value << " is already in the collection!" << std::endl;
+//        std::cout << document.view()["title"].get_string().value << " is already in the collection!" << std::endl;
         return false;
     }
 }

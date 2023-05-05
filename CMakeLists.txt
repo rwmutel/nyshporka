@@ -64,7 +64,7 @@ add_executable(
 		src/config_parser.cpp include/config_parser.h
 		include/exceptions.h
 		src/db_connector.cpp include/db_connector.h
-		src/BSONPage.cpp include/BSONPage.h)
+		src/BSONPage.cpp include/BSONPage.h include/timed_pqueue.h)
 
 add_executable(
 		${SEARCHER_NAME} src/nysh_search.cpp
