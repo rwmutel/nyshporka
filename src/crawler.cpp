@@ -105,12 +105,12 @@ int main(int argc, char *argv[]) {
 
         crow::json::wvalue links_json = links_vector;
 
-        std::cout << "Sending " << links_json.dump() << std::endl;
+//        std::cout << "Sending " << links_json.dump() << std::endl;
 
         cpr::Get(cpr::Url{task_manager_address + "/pages/add"}, cpr::Body{links_json.dump()},
                       cpr::Header{{"Content-Type", "application/json"}});
 
-        std::this_thread::sleep_for(100ms);
+        std::this_thread::sleep_for(10ms);
     }
     return 0;
 }
