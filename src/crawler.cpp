@@ -8,7 +8,6 @@
 #include "BSONPage.h"
 #include "db_connector.h"
 #include <chrono>
-#include <csignal>
 
 using namespace std::literals;
 
@@ -19,7 +18,6 @@ enum {
 
 
 int main(int argc, char *argv[]) {
-
     if (argc != 3)
         return WRONG_ARGUMENTS_COUNT;
     auto pages_per_task = std::stoi(argv[1]);
@@ -35,6 +33,7 @@ int main(int argc, char *argv[]) {
     auto allowed_langs = config_json["allowed_langs"];
     auto allowed_langs_vec = allowed_langs.lo();
 
+    DBConnector db_connection{db_name, col_name, db_address};
     while (true) {
         auto response = cpr::Get(cpr::Url{task_manager_address + "/pages/get/" + std::to_string(pages_per_task)});
 
@@ -84,7 +83,6 @@ int main(int argc, char *argv[]) {
                 [&](const std::shared_ptr<BSONPage> &page) {
                     if (page == nullptr) return;
                     try {
-                        auto db_connection = DBConnector{db_name, col_name, db_address};
                         db_connection.insert_page(page->get_bson());
                         for (const auto &link: page->get_links()) {
                             links.insert(link);
