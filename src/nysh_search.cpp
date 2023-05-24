@@ -3,6 +3,8 @@
 #include <bsoncxx/json.hpp>
 #include <mongocxx/exception/logic_error.hpp>
 #include <crow.h>
+#include <crow/middleware.h>
+#include <crow/middlewares/cors.h>
 #include "db_connector.h"
 
 void exit_handler(int signum) {
@@ -54,15 +56,20 @@ int main (int argc, char *argv[]) {
             std::cout << "Database URI is set to " << db_uri << std::endl;
         }
     }
-    auto db_connection = DBConnector(db_name, col_name, db_uri);
+    auto db_connection = DBConnector(std::move(db_name), std::move(col_name), db_uri);
 
     if (argc > 4 && strcmp(argv[4], "cli") == 0) {
-        std::cout << "Enter your search prompt and get the pages, crawled by nyshporka crawler!" << std::endl;
+        std::cout << "Enter your search prompt and get the pages, crawled by nyshporka crawler:" << std::endl;
         std::cout << "> ";
         start_cli_client(db_connection);
     }
     else {
-        crow::SimpleApp app;
+        crow::App<crow::CORSHandler> app;
+
+        auto& cors = app.get_middleware<crow::CORSHandler>();
+
+        cors.global().origin("*")
+                .methods("GET"_method);
 
         CROW_ROUTE(app, "/search")([&db_connection] (const crow::request& req) {
             char* raw_prompt = req.url_params.get("prompt");
@@ -88,5 +95,6 @@ int main (int argc, char *argv[]) {
         });
 
         auto a_ = app.port(18081).run_async();
+
     }
 }

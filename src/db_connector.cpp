@@ -11,54 +11,34 @@
 
 namespace bb = bsoncxx::builder::basic;
 
-DBConnector::DBConnector(
-        const std::string& database_name,
-        const std::string& collection_name,
-        const std::string& uri_str
-        ) {
-    mongocxx::uri uri(uri_str);
-    try {
-        client = mongocxx::client(uri);
-        database = client[database_name];
-        col = database[collection_name];
-    }
-    catch (mongocxx::exception& e) {
-        throw e;
-    }
-}
-
 DBConnector::DBConnector() = default;;
 
 bool DBConnector::insert_page(
-        bsoncxx::view_or_value<bsoncxx::document::view, bsoncxx::document::value> document
+        bsoncxx::view_or_value<bsoncxx::document::view, bsoncxx::document::value>&& document
         ) {
-    if (!index_present) {
-        col.create_index(bb::make_document(
-                bb::kvp("title", "text"),
-                bb::kvp("headings", "text")
-            )
-        );
-        index_present = true;
+    auto client = pool_.acquire();
+    auto col = (*client)[database_name_][collection_name_];
+    try {
+        if (!col.find_one(bb::make_document(bb::kvp("url", document.view()["url"].get_string().value))))
+        col.insert_one(document.view());
+        else return false;
     }
-    if (!col.find_one(bb::make_document(bb::kvp("title", document.view()["title"].get_string().value)))) {
-        col.insert_one(std::move(document)).value();
-        return true;
-    }
-    else {
-//        std::cout << document.view()["title"].get_string().value << " is already in the collection!" << std::endl;
+    catch (mongocxx::exception& e) {
+        std::cout << "Insertion failed: " << e.what() << std::endl;
         return false;
     }
+
+    return true;
 }
 
 mongocxx::cursor DBConnector::full_text_search(std::string& query) {
     mongocxx::options::find opts{};
-    opts.projection(bb::make_document(bb::kvp("title", 1), bb::kvp("url", 1)));
+    opts.projection(bb::make_document(bb::kvp("title", 1), bb::kvp("url", 1), bb::kvp("headings", 1)));
+
+    auto client = pool_.acquire();
+    auto col = (*client)[database_name_][collection_name_];
     return col.find(
-            bb::make_document(
-                    bb::kvp(
-                            "$text",
-                            bb::make_document(bb::kvp("$search", query))
-                    )
-                ), opts
+            bb::make_document(bb::kvp("$text", bb::make_document(bb::kvp("$search", query)))),
+            opts
             );
 }
