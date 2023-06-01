@@ -43,13 +43,13 @@ void BSONPage::parse_page() {
 }
 
 void BSONPage::parse_links(const std::string& str) {
-    const std::regex url_re{R"!!(<\s*a\s+[^>]*href\s*=\s*"(http[^;|"]*))!!", std::regex_constants::icase};
+    const std::regex url_re{R"!!(<\s*a\s+[^>]*href\s*=\s*"(http[^;|"]*))!!", std::regex_constants::optimize};
     links_ = std::set<std::string>{std::sregex_token_iterator(str.cbegin(), str.cend(), url_re, 1),
                                    std::sregex_token_iterator()};
 }
 
 void BSONPage::parse_lang(const std::string &str) {
-    const std::regex lang_re{R"!!(<\s*html\s+[^>]*lang\s*=\s*"([^"]*)")!!", std::regex_constants::icase};
+    const std::regex lang_re{R"!!(<\s*html\s+[^>]*lang\s*=\s*"([^"]*)")!!", std::regex_constants::optimize};
 
     std::smatch match;
     if (std::regex_search(str, match, lang_re)) {
@@ -58,7 +58,7 @@ void BSONPage::parse_lang(const std::string &str) {
 }
 
 void BSONPage::parse_title(const std::string &str) {
-    const std::regex title_re{R"!!(<\s*title\s*>([^<]*)<\s*/\s*title\s*>)!!", std::regex_constants::icase};
+    const std::regex title_re{R"!!(<\s*title\s*>([^<]*)<\s*/\s*title\s*>)!!", std::regex_constants::optimize};
 
     std::smatch match;
     if (std::regex_search(str, match, title_re)) {
@@ -68,7 +68,7 @@ void BSONPage::parse_title(const std::string &str) {
 }
 
 void BSONPage::parse_headings(const std::string &str) {
-    const std::regex heading_re{R"!!(<h[1-6][^>]*>(.*?)<\/h[1-6]>)!!", std::regex_constants::icase};
+    const std::regex heading_re{R"!!(<h[1-6][^>]*>(.*?)<\/h[1-6]>)!!", std::regex_constants::optimize};
 
     std::smatch match;
     std::string::const_iterator search_start(str.cbegin());

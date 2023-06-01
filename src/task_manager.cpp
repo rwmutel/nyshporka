@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
         CROW_LOG_INFO << "Recovered seed file: " << domains_priority.size() << " entries.";
     }
 
-CROW_LOG_INFO << "Task Manager started.";
+    CROW_LOG_INFO << "Task Manager started.";
 
     CROW_ROUTE(app, "/pages/get/<uint>")([&domains_map, &domains_priority](size_t link_count){
         std::string domain;
