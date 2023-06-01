@@ -15,8 +15,10 @@ inline std::chrono::steady_clock::time_point get_current_time_fenced() {
     return res_time;
 }
 
-template<typename T, class Compare = std::greater<std::pair<long, T>>>
-class TimedPQueue : public oneapi::tbb::concurrent_priority_queue<std::pair<long, T>, Compare> {
+template<typename T, class Compare = std::greater<std::pair<std::pair<long, long>, T>>>
+class TimedPQueue : public oneapi::tbb::concurrent_priority_queue<std::pair<std::pair<long, long>, T>, Compare> {
+    using elem = std::pair<std::pair<long, long>, T>;
+    using base = oneapi::tbb::concurrent_priority_queue<elem, Compare>;
 public:
     TimedPQueue() = default;
     TimedPQueue(const TimedPQueue&) = delete;
@@ -25,20 +27,20 @@ public:
     TimedPQueue& operator=(TimedPQueue&&) = delete;
 
     template<typename U>
-    void push(U&& value) {
+    void push(U&& value, long priority = 0) {
         auto current_time = get_current_time_fenced().time_since_epoch().count();
-        oneapi::tbb::concurrent_priority_queue<std::pair<long, T>, Compare>::push({current_time, std::forward<U>(value)});
+        base::push({std::make_pair(priority, current_time), std::forward<U>(value)});
     }
 
-    bool try_pop(T& value) {
-        std::pair<long, T> temp;
-        if (oneapi::tbb::concurrent_priority_queue<std::pair<long, T>, Compare>::try_pop(temp)) {
+    bool try_pop(T& value, long& priority) {
+        elem temp;
+        if (base::try_pop(temp)) {
             value = std::move(temp.second);
+            priority = temp.first.first;
             return true;
         }
         return false;
     }
-
 };
 
 #endif //NYSHPORKA_TIMED_PQUEUE_H

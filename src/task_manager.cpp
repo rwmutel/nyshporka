@@ -14,9 +14,9 @@
 #include "config_parser.h"
 #include "exceptions.h"
 #include "timed_pqueue.h"
-#include <oneapi/tbb/concurrent_queue.h>
 #include <oneapi/tbb/concurrent_unordered_set.h>
 #include <oneapi/tbb/concurrent_unordered_map.h>
+#include <oneapi/tbb/concurrent_queue.h>
 
 std::vector<std::string> parse_argv(int argc, char* argv[]) {
     if (argc < 2) {
@@ -45,6 +45,7 @@ std::string get_domain(const std::string& url) {
 
 int main(int argc, char* argv[]) {
     crow::SimpleApp app;
+//    app.loglevel(crow::LogLevel::Debug);
 
     const auto args = parse_argv(argc, argv);
     const auto& config_file_name = args.at(0);
@@ -55,7 +56,7 @@ int main(int argc, char* argv[]) {
     }
     po::variables_map params = parse_config(config_file);
 
-    const auto allowed_domains = params["allowed_domains"].as<std::vector<std::string>>();
+//    const auto allowed_domains = params["allowed_domains"].as<std::vector<std::string>>();
 
     oneapi::tbb::concurrent_unordered_set<std::string> visited;
     {
@@ -71,16 +72,16 @@ int main(int argc, char* argv[]) {
     }
 
     TimedPQueue<std::string> domains_priority;
-    oneapi::tbb::concurrent_unordered_map<std::string, oneapi::tbb::concurrent_queue<std::string>> domains_map;
+    oneapi::tbb::concurrent_unordered_map<std::string, std::queue<std::string>> domains_map;
     auto seed_file = params["seed_file"].as<std::string>();
 
     {
         auto seed_vector = params["seed_webpages"].as<std::vector<std::string>>();
-        for (auto& x: seed_vector) {
+        for (auto &x: seed_vector) {
             auto domain = get_domain(x);
             domains_priority.push(domain);
             if (domains_map.find(domain) == domains_map.end()) {
-                domains_map.insert({domain, oneapi::tbb::concurrent_queue<std::string>()});
+                domains_map.insert({domain, std::queue<std::string>()});
             }
             domains_map[domain].push(x);
         }
@@ -89,9 +90,9 @@ int main(int argc, char* argv[]) {
             std::string line;
             while (seed_file_stream >> line) {
                 auto domain = get_domain(line);
-                domains_priority.push(domain);
                 if (domains_map.find(domain) == domains_map.end()) {
-                    domains_map.insert({domain, oneapi::tbb::concurrent_queue<std::string>()});
+                    domains_map.insert({domain, std::queue<std::string>()});
+                    domains_priority.push(domain);
                 }
                 domains_map[domain].push(line);
             }
@@ -99,55 +100,71 @@ int main(int argc, char* argv[]) {
 
         CROW_LOG_INFO << "Recovered seed file: " << domains_priority.size() << " entries.";
     }
+
     CROW_LOG_INFO << "Task Manager started.";
 
     CROW_ROUTE(app, "/pages/get/<uint>")([&domains_map, &domains_priority](size_t link_count){
         std::string domain;
-        domains_priority.try_pop(domain);
-        auto& link_queue_try = domains_map[domain];
-        while (link_queue_try.unsafe_size() == 0) {
-            domains_priority.push(domain);
-            domains_priority.try_pop(domain);
-            if (domains_map[domain].unsafe_size() == 0) {
-                std::cout << "Domain: " << domain << " is empty." << std::endl;
-                domains_priority.try_pop(domain);
-            } else {
-                break;
-            }
-        }
-        std::cout << "Domain: " << domain << std::endl;
-        auto& link_queue = domains_map[domain];
-        size_t queue_size = link_queue.unsafe_size();
-        link_count = (link_count > queue_size) ? queue_size : link_count;
-        std::vector<crow::json::wvalue> links;
-        for (size_t i = 0; i < link_count; i++) {
-            std::string link;
-            link_queue.try_pop(link);
-            links.emplace_back(std::move(link));
-        }
-        domains_priority.push(domain);
-        crow::json::wvalue response = links;
+        long priority;
         std::stringstream log;
-        log << "Task Manager sent " << link_count << " links.";
+        if (!domains_priority.try_pop(domain, priority))
+            return crow::response(500, "No domains left.");
+
+        std::vector<crow::json::wvalue> links;
+        while (link_count>0) {
+            auto& link_queue_try = domains_map[domain];
+            while (link_queue_try.empty()) {
+                domains_priority.push(domain, priority+100);
+                domains_priority.try_pop(domain, priority);
+                if (domains_map[domain].empty()) {
+                    CROW_LOG_WARNING << "Domain: " << domain << " is empty.";
+                    domains_priority.try_pop(domain, priority);
+                } else {
+                    break;
+                }
+            }
+
+            auto& link_queue = domains_map[domain];
+            size_t queue_size = link_queue.size();
+            size_t i = 0;
+            for (; i < link_count; i++) {
+                if (i==queue_size) {
+                    domains_priority.push(domain, priority+10);
+                    break;
+                }
+                std::string link;
+                link = link_queue.front();
+                link_queue.pop();
+                links.emplace_back(std::move(link));
+            }
+            if (i<=link_count)
+                link_count -= i;
+            log << std::endl << "Task Manager sent " << i << " links from domain " << domain << " with priority "
+            << priority;
+        }
+
+        domains_priority.push(domain, priority+1);
+        crow::json::wvalue response = links;
         CROW_LOG_INFO << log.str();
         return crow::response(200, response);
     });
 
-    CROW_ROUTE(app, "/pages/add")([&domains_map, &domains_priority, &visited, &allowed_domains](const crow::request& req){
+    CROW_ROUTE(app, "/pages/add")([&domains_map, &domains_priority, &visited](const crow::request& req){
         auto crawler_response = crow::json::load(req.body);
         if (crawler_response.t() != crow::json::type::List) {
             CROW_LOG_ERROR << "Crawler returned invalid JSON. Request body must be a JSON List";
             return crow::response(400);
         }
+        std::stringstream log;
         std::vector<crow::json::rvalue> new_links = crawler_response.lo();
         int i = 0;
-//        std::shuffle(new_links.begin(), new_links.end(), std::mt19937(std::random_device()()));
+
         for (auto& link: new_links) {
             auto domain = get_domain(link.s());
-            if (!visited.contains(link.s()) && std::find(allowed_domains.begin(),
-            allowed_domains.end(), domain) != allowed_domains.end()) {
+            if (!visited.contains(link.s())) {
                 if (domains_map.find(domain) == domains_map.end()) {
-                    domains_map.insert({domain, oneapi::tbb::concurrent_queue<std::string>()});
+                    domains_map.insert({domain, std::queue<std::string>()});
+                    log << "Received new domain: " << domain << std::endl;
                     domains_priority.push(domain);
                 }
                 domains_map[domain].push(link.s());
@@ -155,7 +172,6 @@ int main(int argc, char* argv[]) {
                 ++i;
             }
         }
-        std::stringstream log;
         log << "Task Manager received " << i << " links.";
         CROW_LOG_INFO << log.str();
         return crow::response(200);
@@ -183,10 +199,12 @@ int main(int argc, char* argv[]) {
             CROW_LOG_INFO << "Writing seed file: " << domains_priority.size() << " domains.";
             while (!domains_priority.empty()) {
                 std::string domain;
-                domains_priority.try_pop(domain);
+                long priority;
+                domains_priority.try_pop(domain, priority);
                 while (!domains_map[domain].empty()) {
                     std::string link;
-                    domains_map[domain].try_pop(link);
+                    link = domains_map[domain].front();
+                    domains_map[domain].pop();
                     seed_file_stream << link << "\n";
                 }
             }
