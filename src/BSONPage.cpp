@@ -53,7 +53,7 @@ void BSONPage::parse_lang(const std::string &str) {
 
     std::smatch match;
     if (std::regex_search(str, match, lang_re)) {
-        lang_ = match[1];
+        lang_ = match[1].str().substr(0, 2);
     }
 }
 
