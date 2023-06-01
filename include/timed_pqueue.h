@@ -41,7 +41,6 @@ public:
         }
         return false;
     }
-
 };
 
 #endif //NYSHPORKA_TIMED_PQUEUE_H

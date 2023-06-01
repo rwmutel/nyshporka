@@ -37,14 +37,7 @@ int main(int argc, char *argv[]) {
     while (true) {
         auto response = cpr::Get(cpr::Url{task_manager_address + "/pages/get/" + std::to_string(pages_per_task)});
 
-        if (response.status_code == 500) {
-            std::cerr << "No pages to download!" << std::endl;
-            std::this_thread::sleep_for(1s);
-            continue;
-        }
-
         auto json = crow::json::load(response.text);
-        std::cout << "Got " << json.lo().size() << " pages to download!" << std::endl;
 
         std::vector<std::string> links_vec;
 

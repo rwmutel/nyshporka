@@ -8,6 +8,8 @@
 #include <iostream>
 #include <bsoncxx/builder/basic/array.hpp>
 
+using namespace std::chrono_literals;
+
 BSONPage::BSONPage(std::string&& url) : url_(std::move(url)) {
     parse_page();
 }
@@ -18,8 +20,9 @@ std::string BSONPage::get_text() const {
         r = cpr::Get(cpr::Url{url_},
                      cpr::Header{
                              {"User-Agent",
-                                       "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36"}
-                     });
+                                       "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.45 Safari/537.36"},
+                     },
+                     cpr::Timeout{1s});
     }
     catch (std::exception& e) {
         throw (std::runtime_error("Error while parsing " + url_));

@@ -43,7 +43,7 @@ int main (int argc, char *argv[]) {
     std::cout << "Welcome to nysh-search!" << std::endl;
     std::string user_input;
     std::string db_name = "nysh_pages";
-    std::string col_name = "pages_0_3";
+    std::string col_name = "pages_0_4";
     std::string db_uri = "mongodb://localhost:27017";
     if (argc > 2) {
         std::cout << "Reading database name and collection name from command line... " << std::endl;
