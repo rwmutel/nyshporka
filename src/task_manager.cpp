@@ -16,7 +16,7 @@
 #include "timed_pqueue.h"
 #include <oneapi/tbb/concurrent_unordered_set.h>
 #include <oneapi/tbb/concurrent_unordered_map.h>
-#include <queue>
+#include <oneapi/tbb/concurrent_queue.h>
 
 std::vector<std::string> parse_argv(int argc, char* argv[]) {
     if (argc < 2) {
@@ -89,9 +89,9 @@ int main(int argc, char* argv[]) {
             std::string line;
             while (seed_file_stream >> line) {
                 auto domain = get_domain(line);
-                domains_priority.push(domain);
                 if (domains_map.find(domain) == domains_map.end()) {
                     domains_map.insert({domain, std::queue<std::string>()});
+                    domains_priority.push(domain);
                 }
                 domains_map[domain].push(line);
             }
@@ -99,6 +99,7 @@ int main(int argc, char* argv[]) {
 
         CROW_LOG_INFO << "Recovered seed file: " << domains_priority.size() << " entries.";
     }
+
 CROW_LOG_INFO << "Task Manager started.";
 
     CROW_ROUTE(app, "/pages/get/<uint>")([&domains_map, &domains_priority](size_t link_count){
@@ -109,7 +110,7 @@ CROW_LOG_INFO << "Task Manager started.";
 
         auto& link_queue_try = domains_map[domain];
         while (link_queue_try.empty()) {
-            domains_priority.push(domain);
+            domains_priority.push(domain, priority+100);
             domains_priority.try_pop(domain, priority);
             if (domains_map[domain].empty()) {
                 std::cout << "Domain: " << domain << " is empty." << std::endl;
@@ -129,7 +130,8 @@ CROW_LOG_INFO << "Task Manager started.";
             link_queue.pop();
             links.emplace_back(std::move(link));
         }
-        domains_priority.push(domain, ++priority);
+        std::cout << "Priority: " << priority << std::endl;
+        domains_priority.push(domain, priority+1);
         crow::json::wvalue response = links;
         std::stringstream log;
         log << "Task Manager sent " << link_count << " links.";
@@ -152,6 +154,7 @@ CROW_LOG_INFO << "Task Manager started.";
             allowed_domains.end(), domain) != allowed_domains.end()) {
                 if (domains_map.find(domain) == domains_map.end()) {
                     domains_map.insert({domain, std::queue<std::string>()});
+                    std::cout << "Received new domain: " << domain << std::endl;
                     domains_priority.push(domain);
                 }
                 domains_map[domain].push(link.s());
